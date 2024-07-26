@@ -1,0 +1,22 @@
+{
+  "name": "ai-latex-generator",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "dev": "node esbuild.config.mjs",
+    "version": "node version-bump.mjs && git add manifest.json versions.json"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@types/node": "^20.14.12",
+    "builtin-modules": "^4.0.0",
+    "esbuild": "^0.23.0",
+    "obsidian": "^1.6.6",
+    "tslib": "^2.6.3",
+    "typescript": "^5.5.4"
+  }
+}
