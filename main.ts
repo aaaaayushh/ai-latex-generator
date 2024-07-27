@@ -62,7 +62,8 @@ export default class LatexConverterPlugin extends Plugin {
                 },
                 body: JSON.stringify({
                     model: this.settings.ollamaModel,
-                    prompt: `Convert the following natural language to a LaTeX equation, output ONLY THE EQUATION AND NOTHING ELSE: "${input}"`,
+                    prompt: `Convert the following natural language to a LaTeX equation, output ONLY THE EQUATION AND NOTHING ELSE: "${input}".Output should
+                    be in this format: \${output}\$`,
                     stream: true,
                 }),
             });

@@ -1,4 +1,4 @@
-# LaTeX Generator for Obsidian
+# LaTeX Generator Plugin for Obsidian
 
 ## Description
 
@@ -82,4 +82,4 @@ If you're having trouble with the plugin, please open an issue on the GitHub rep
 
 ---
 
-We hope you find the LaTeX Generator plugin useful for your mathematical and scientific writing in Obsidian. Happy note-taking!
+I hope you find the LaTeX Generator plugin useful for your mathematical and scientific writing in Obsidian. Happy note-taking!
