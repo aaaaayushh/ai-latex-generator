@@ -1,11 +1,10 @@
 {
     "id": "ai-latex-generator",
     "name": "AI LaTeX Generator",
-    "version": "1.0.3",
-    "minAppVersion": "1.0.3",
+    "version": "1.0.4",
+    "minAppVersion": "1.0.4",
     "description": "Convert natural language to LaTeX equations using a local LLM.",
     "author": "Aayush Shah",
     "authorUrl": "https://github.com/aaaaayushh",
-    "isDesktopOnly": true,
-    "readme": "README.MD"
+    "isDesktopOnly": true
   }
