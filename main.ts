@@ -1,11 +1,17 @@
 import { App, Plugin, PluginSettingTab, Setting, Notice, Editor } from 'obsidian';
 
 interface LatexConverterSettings {
-    ollamaModel: string;
+    model: string;
+    llmType: string;
+    apiKey: string;
+    apiEndpoint: string;
 }
 
 const DEFAULT_SETTINGS: LatexConverterSettings = {
-    ollamaModel: 'llama2'
+    model: 'llama2',
+    llmType: 'ollama',
+    apiKey: '',
+    apiEndpoint: '',
 }
 
 export default class LatexConverterPlugin extends Plugin {
@@ -50,72 +56,107 @@ export default class LatexConverterPlugin extends Plugin {
             loadingNotice.hide();
         }
     }
-
     async callLocalLLM(input: string): Promise<string> {
-        const ollamaEndpoint = 'http://localhost:11434/api/generate';
-
+        const isOllama = this.settings.llmType === 'ollama';
+        const endpoint = isOllama
+            ? 'http://localhost:11434/api/generate'
+            : this.settings.apiEndpoint;
+        const headers = isOllama
+            ? { 'Content-Type': 'application/json' }
+            : {
+                'Authorization': 'Bearer ' + this.settings.apiKey,
+                'Content-Type': 'application/json',
+            };
+        const body = isOllama
+            ? JSON.stringify({
+                  model: this.settings.model,
+                  prompt: `Convert the following natural language to a LaTeX equation, output ONLY THE EQUATION AND NOTHING ELSE: "${input}". Output should be in this format: \${output}\$`,
+                  stream: true,
+              })
+            : JSON.stringify({
+                  messages: [
+                      {
+                          role: 'user',
+                          content: `Convert the following natural language to a LaTeX equation, output ONLY THE EQUATION AND NOTHING ELSE: "${input}". Output should be in this format: \${output}\$`,
+                      },
+                  ],
+                  model: this.settings.model,
+              });
+    
+        return this.callLLM(endpoint, headers, body, isOllama);
+    }
+    
+    async callLLM(endpoint: string, headers: object, body: string, isOllama: boolean): Promise<string> {
         try {
-            const response = await fetch(ollamaEndpoint, {
+            const response = await fetch(endpoint, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    model: this.settings.ollamaModel,
-                    prompt: `Convert the following natural language to a LaTeX equation, output ONLY THE EQUATION AND NOTHING ELSE: "${input}".Output should
-                    be in this format: \${output}\$`,
-                    stream: true,
-                }),
+                headers,
+                body,
             });
-
+    
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-
+    
             const reader = response.body?.getReader();
-
             if (!reader) {
-                throw new Error('Unable to read response from Ollama');
+                throw new Error('Unable to read response from your model endpoint');
             }
-
+    
             let latexEquation = '';
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
-
+    
                 const chunk = new TextDecoder().decode(value);
                 const lines = chunk.split('\n').filter(line => line.trim() !== '');
-
+    
                 for (const line of lines) {
                     try {
                         const data = JSON.parse(line);
-                        if (data.response) {
+                        if (isOllama && data.response) {
                             latexEquation += data.response;
+                        } else if (!isOllama && data.choices && data.choices[0]?.message?.content) {
+                            latexEquation += data.choices[0].message.content;
                         }
                     } catch (parseError) {
                         console.error('Error parsing JSON:', parseError);
-                        throw new Error('Failed to parse response from Ollama');
+                        throw new Error('Failed to parse response from model');
                     }
                 }
             }
-
+    
             return latexEquation.trim();
         } catch (error) {
-            console.error('Error in callLocalLLM:', error);
+            console.error('Error in callLLM:', error);
             throw error;
         }
     }
-
     handleError(error: any) {
         let errorMessage = 'An unexpected error occurred while converting to LaTeX.';
         
         if (error instanceof Error) {
             if (error.message.includes('HTTP error')) {
-                errorMessage = `Failed to connect to Ollama. Please ensure Ollama is running and accessible at http://localhost:11434. Error: ${error.message}`;
+                if (this.settings.llmType === 'ollama') {
+                    errorMessage = `Failed to connect to Ollama. Please ensure Ollama is running and accessible at http://localhost:11434. Error: ${error.message}`;
+                }
+                else {
+                    errorMessage = `Failed to connect to your model. Please ensure the API key and endpoint are correct. Error: ${error.message}`;
+                }
             } else if (error.message.includes('Failed to parse response')) {
-                errorMessage = `Received an invalid response from Ollama. The model might be having issues. Error: ${error.message}`;
+                if (this.settings.llmType === 'ollama') {
+                    errorMessage = `Received an invalid response from Ollama. The model might be having issues. Error: ${error.message}`;
+                }
+                else {
+                    errorMessage = `Received an invalid response from your model. The model might be having issues. Error: ${error.message}`;
+                }
             } else if (error.message.includes('Unable to read response')) {
-                errorMessage = `Failed to read the response from Ollama. The connection might have been interrupted. Error: ${error.message}`;
+                if (this.settings.llmType === 'ollama') {
+                    errorMessage = `Failed to read the response from Ollama. The connection might have been interrupted. Error: ${error.message}`;
+                }
+                else {
+                    errorMessage = `Failed to read the response from your model. The connection might have been interrupted. Error: ${error.message}`;
+                }
             } else {
                 errorMessage = `Error converting to LaTeX: ${error.message}`;
             }
@@ -140,15 +181,52 @@ class LatexConverterSettingTab extends PluginSettingTab {
         containerEl.empty();
 
         containerEl.createEl('h2', {text: 'LaTeX Generator Settings'});
-
+        //This is the settings dropdown to select whether to use ollama or openai
+        //The default is ollama
         new Setting(containerEl)
-            .setName('Ollama Model')
-            .setDesc('Choose the Ollama model to use for LaTeX conversion')
+            .setName('API')
+            .setDesc('Choose the API to use for LaTeX conversion')
+            .addDropdown(dropdown => dropdown
+                .addOptions({
+                    'ollama': 'Ollama',
+                    'openai': 'OpenAI Compatible',
+                })
+                .setValue(this.plugin.settings.llmType)
+                .onChange(async (value) => {
+                    this.plugin.settings.llmType = value;
+                    await this.plugin.saveSettings();
+                }));
+        //This is the input to select the model to use for ollama
+        new Setting(containerEl)
+            .setName('Model Name')
+            .setDesc('Choose the Model name for Ollama or OpenAI to use for LaTeX conversion')
             .addText(text => text
                 .setPlaceholder('Enter model name')
-                .setValue(this.plugin.settings.ollamaModel)
+                .setValue(this.plugin.settings.model)
                 .onChange(async (value) => {
-                    this.plugin.settings.ollamaModel = value;
+                    this.plugin.settings.model = value;
+                    await this.plugin.saveSettings();
+                }));
+        //This is the the text input to enter the api key
+        new Setting(containerEl)
+            .setName('OpenAI API Key')
+            .setDesc('Enter the OpenAI API key')
+            .addText(text => text
+                .setPlaceholder('Enter API key')
+                .setValue(this.plugin.settings.apiKey)
+                .onChange(async (value) => {
+                    this.plugin.settings.apiKey = value;
+                    await this.plugin.saveSettings();
+                }));
+        //This is the the text input to enter the api endpoint
+        new Setting(containerEl)
+            .setName('OpenAI API Endpoint')
+            .setDesc('Enter the OpenAI API endpoint')
+            .addText(text => text
+                .setPlaceholder('Enter API endpoint')
+                .setValue(this.plugin.settings.apiEndpoint)
+                .onChange(async (value) => {
+                    this.plugin.settings.apiEndpoint = value;
                     await this.plugin.saveSettings();
                 }));
     }

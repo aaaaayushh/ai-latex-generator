@@ -1,3 +1,6 @@
 {
-  "ollamaModel": "llama3.1"
+  "model": "",
+  "llmType": "",
+  "apiKey": "",
+  "apiEndpoint": ""
 }
