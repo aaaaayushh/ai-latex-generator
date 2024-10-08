@@ -2,19 +2,22 @@
 
 ## Description
 
-The LaTeX Generator is a powerful plugin for Obsidian that allows you to easily convert natural language expressions into LaTeX equations. This plugin leverages the power of Ollama, a local LLM serving platform, to provide accurate and quick conversions right within your Obsidian editor.
+The LaTeX Generator is a powerful plugin for Obsidian that allows you to easily convert natural language expressions into LaTeX equations. This plugin leverages the power of Ollama, a local LLM serving platform, or any OpenAI API compatible model to provide accurate and quick conversions right within your Obsidian editor.
 
 ## Features
 
 - Convert selected text to LaTeX equations with a single command
 - Customizable Ollama model selection
+- Customizable OpenAI model endpoint
 - Visual feedback with a loading indicator during conversion
 - Detailed error messages for troubleshooting
 
 ## Requirements
 
-- Obsidian v0.9.7 or higher
-- Ollama installed and running locally (see [Ollama's official website](https://ollama.com/) for installation instructions)
+1. Obsidian v0.9.7 or higher
+2. One of the following
+   - Ollama installed and running locally (see [Ollama's official website](https://ollama.com/) for installation instructions)
+   - An API key, model endpoint and model name for an OpenAI compatible model (For example, [Groq](https://groq.com/) is a fast and free option)
 
 ## Installation
 
@@ -44,7 +47,10 @@ To configure the LaTeX Generator plugin:
 1. Go to Settings > Community Plugins
 2. Find "LaTeX Generator" in the list and click on the gear icon
 3. In the settings tab, you can:
-   - Set the Ollama model to use for conversions (default is "llama2")
+   - Choose between using a local model (Ollama) or an OpenAI compatible model
+   - Set the name of the Ollama/OpenAI model to use for conversions (default is "llama2")
+   - Set the API Key (OpenAI only)
+   - Set the model endpoint (OpenAI only)
 
 ## Troubleshooting
 
